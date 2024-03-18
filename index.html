@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Local heatmap</title>
+  <script src="config.js"></script>
+  <script src="https://cdn.maptiler.com/maptiler-sdk-js/v1.2.0/maptiler-sdk.umd.min.js"></script>
+  <link href="https://cdn.maptiler.com/maptiler-sdk-js/v1.2.0/maptiler-sdk.css" rel="stylesheet" />
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+    }
+    #map {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 100%;
+  }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+</body>
+
+<script>
+maptilersdk.config.apiKey = MAP_TILER_API_KEY;
+const map = new maptilersdk.Map({
+  container: 'map',
+  style: maptilersdk.MapStyle.OUTDOOR,
+  center: [-121.9, 37.3],
+  zoom: 11
+});
+map.on('load', async function() {
+  console.log('loaded');
+  map.addSource('routes', {
+    type: 'geojson',
+    data: 'http://localhost:8000/output/routes.geojson'
+  });
+  console.log('added source');
+  map.addLayer({
+    id: 'routes_layer',
+    type: 'line',
+    source: 'routes',
+    'layout': {
+      'line-join': 'round',
+      'line-cap': 'round'
+    },
+    'paint': {
+      'line-blur': 0.5,
+      'line-color': '#ff0000',
+      'line-width': 5,
+      'line-opacity': 0.35,
+      // line-sort-key: number
+    }
+  });
+  console.log('added layer');
+});
+</script>
+</html>
