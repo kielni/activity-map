@@ -3,7 +3,7 @@ lint:
 	flake8 *.py
 
 strava:
-	python gpx_to_geojson.py output/activities --bbox " $BOUNDING_BOX" --output output/routes.geojson
+	python prep_strava.py output/activities --bbox " $BOUNDING_BOX" --output output/routes.geojson
 	cp output/routes.geojson output/routes_gz.geojson
 	gzip output/routes_gz.geojson
 	mv output/routes_gz.geojson.gz output/routes_gz.geojson
