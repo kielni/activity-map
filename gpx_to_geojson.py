@@ -12,6 +12,7 @@ from shapely import Polygon
 
 log = logging.getLogger("main")
 
+
 def main(path: str, output_fn: str, bbox_str: Optional[str] = None):
     bbox_df = None
     # bounding box is a GeoDataFrame containing a Polygon
@@ -19,7 +20,7 @@ def main(path: str, output_fn: str, bbox_str: Optional[str] = None):
         x1, y1, x2, y2 = [float(x) for x in bbox_str.split(",")]
         bbox_df = gpd.GeoDataFrame(
             geometry=[Polygon(((x1, y1), (x1, y2), (x2, y2), (x2, y1), (x1, y1)))],
-            crs="EPSG:4326"
+            crs="EPSG:4326",
         )
 
     routes = []
@@ -29,7 +30,9 @@ def main(path: str, output_fn: str, bbox_str: Optional[str] = None):
         seen = set(prev_df["id"])
         log.info(f"loaded {len(prev_df)} routes from {output_fn}")
     except Exception:
-        prev_df = gpd.GeoDataFrame([], columns=["name", "geometry", "start", "id", "url"], crs="EPSG:4326")
+        prev_df = gpd.GeoDataFrame(
+            [], columns=["name", "geometry", "start", "id", "url"], crs="EPSG:4326"
+        )
 
     local_tz = tz.gettz("America/Los_Angeles")
     filenames = glob.glob(f"{path}/*.gpx")
@@ -43,7 +46,13 @@ def main(path: str, output_fn: str, bbox_str: Optional[str] = None):
         # read gpx to get start time
         with open(filename, "r") as f:
             gpx = gpxpy.parse(f)
-        start = gpx.tracks[0].segments[0].points[0].time.astimezone(local_tz).strftime("%b %-d, %Y %-I:%M%p")
+        start = (
+            gpx.tracks[0]
+            .segments[0]
+            .points[0]
+            .time.astimezone(local_tz)
+            .strftime("%b %-d, %Y %-I:%M%p")
+        )
 
         # read gpx into geopandas GeoDataFrame
         route = gpd.read_file(filename, engine="pyogrio", layer="tracks")
@@ -64,11 +73,11 @@ def main(path: str, output_fn: str, bbox_str: Optional[str] = None):
         log.info(f"\tadding {name}\t{start}")
         routes.append(route)
 
-    gdf = gpd.GeoDataFrame(pd.concat([prev_df] + routes, ignore_index=True), crs="EPSG:4326")
+    gdf = gpd.GeoDataFrame(
+        pd.concat([prev_df] + routes, ignore_index=True), crs="EPSG:4326"
+    )
     gdf.to_file(output_fn, driver="GeoJSON")
     log.info(f"wrote {len(gdf)} routes to {output_fn}")
-    # countries_gdf.to_file("countries.geojson", driver='GeoJSON')
-    # tippecanoe -zg -o out.mbtiles --drop-densest-as-needed in.geojson
 
 
 if __name__ == "__main__":
@@ -79,8 +88,16 @@ if __name__ == "__main__":
     parser.add_argument("path", type=str, help="path to gpx files")
     # need a leading space to prevent argparse from treating - as an argument
     # --bbox " -122.732314,36.916954,-120.977248,37.699028"
-    parser.add_argument("--bbox", type=str,
-                        help="bounding box: \" lat,lng,lat,lng\" include leading space before - so it won't be treated as an argument")
-    parser.add_argument("--output", type=str, default="routes.geojson", help="output filename")
+    parser.add_argument(
+        "--bbox",
+        type=str,
+        help=(
+            'bounding box: " lat,lng,lat,lng" include leading space before - so it '
+            "won't be treated as an argument"
+        ),
+    )
+    parser.add_argument(
+        "--output", type=str, default="routes.geojson", help="output filename"
+    )
     args = parser.parse_args()
     main(args.path, args.output, args.bbox.strip() if args.bbox else None)
