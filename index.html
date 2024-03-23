@@ -33,29 +33,14 @@ const map = new maptilersdk.Map({
   zoom: 11
 });
 map.on('load', async function() {
-  console.log('loaded');
-  map.addSource('routes', {
-    type: 'geojson',
-    data: 'http://localhost:8000/output/routes.geojson'
+  console.log('loaded map; loading data from ', GEOJSON_URL);
+  await maptilersdk.helpers.addPolyline(map, {
+    data: GEOJSON_URL,
+    lineColor: '#ff0000',
+    lineWwidth: 5,
+    lineOpacity: 0.35,
+    lineBlur: 0.5,
   });
-  console.log('added source');
-  map.addLayer({
-    id: 'routes_layer',
-    type: 'line',
-    source: 'routes',
-    'layout': {
-      'line-join': 'round',
-      'line-cap': 'round'
-    },
-    'paint': {
-      'line-blur': 0.5,
-      'line-color': '#ff0000',
-      'line-width': 5,
-      'line-opacity': 0.35,
-      // line-sort-key: number
-    }
-  });
-  console.log('added layer');
 });
 </script>
 </html>
