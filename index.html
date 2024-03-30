@@ -26,6 +26,7 @@
 
 <script>
 maptilersdk.config.apiKey = MAP_TILER_API_KEY;
+const GEOJSON_URL = HOST + '/routes.geojson'
 const map = new maptilersdk.Map({
   container: 'map',
   style: maptilersdk.MapStyle.OUTDOOR,

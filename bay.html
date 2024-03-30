@@ -26,6 +26,9 @@
 
 <script>
 maptilersdk.config.apiKey = MAP_TILER_API_KEY;
+const RIDGE_TRAIL_URL = HOST + '/ridge_trail.geojson'
+const BAY_TRAIL_URL = HOST + '/bay_trail.geojson'
+const TRAIL_ROUTES_URL = HOST + '/trail_routes.geojson'
 const map = new maptilersdk.Map({
   container: 'map',
   style: maptilersdk.MapStyle.OUTDOOR,
@@ -33,7 +36,6 @@ const map = new maptilersdk.Map({
   zoom: 10
 });
 map.on('load', async function() {
-  console.log('loaded map; loading data from ', GEOJSON_URL);
   await maptilersdk.helpers.addPolyline(map, {
     data: RIDGE_TRAIL_URL,
     lineColor: '#FFFF00',

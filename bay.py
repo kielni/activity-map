@@ -18,12 +18,12 @@ def overlapping_routes(routes_fn: str, trail_fns: List[str], output_fn: str):
     route_df = gpd.read_file(routes_fn)
     log.info(f"loaded {len(trail_df)} trail segments, {len(route_df)} routes")
     # spatial join to find overlapping routes
-    overlap_df = gpd.sjoin(route_df, trail_df, op="intersects")
+    overlap_df = gpd.sjoin(route_df, trail_df, predicate="intersects")
     log.info(f"found {len(overlap_df.index)} intersecting routes")
     # use name_right (trail name) as name
     overlap_df["name"] = overlap_df["name_right"]
     overlap_df = overlap_df[["name", "id_right", "url", "start", "geometry", "legend"]]
-    overlap_df.fillna("", inplace=True)
+    overlap_df.rename(columns={"id_right": "id"}, inplace=True)
     overlap_df.to_file(output_fn, driver="GeoJSON")
     log.info(f"wrote {len(overlap_df)} routes to {output_fn}")
 

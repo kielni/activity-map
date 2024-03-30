@@ -2,7 +2,7 @@ import argparse
 import glob
 import logging
 import re
-from typing import Optional, Set
+from typing import Optional, Set, List
 
 from dateutil import tz
 import geopandas as gpd
@@ -14,7 +14,7 @@ log = logging.getLogger("main")
 
 
 def main(path: str, output_fn: str, bbox_str: Optional[str] = None):
-    bbox_df = None
+    bbox_df: Optional[gpd.GeoDataFrame] = None
     # bounding box is a GeoDataFrame containing a Polygon
     if bbox_str:
         x1, y1, x2, y2 = [float(x) for x in bbox_str.split(",")]
@@ -23,8 +23,9 @@ def main(path: str, output_fn: str, bbox_str: Optional[str] = None):
             crs="EPSG:4326",
         )
 
-    routes = []
+    routes: List[gpd.GeoDataFrame] = []
     seen: Set[str] = set()
+    log.info(f"loading {output_fn}")
     try:
         prev_df = gpd.read_file(output_fn)
         seen = set(prev_df["id"])
@@ -36,6 +37,7 @@ def main(path: str, output_fn: str, bbox_str: Optional[str] = None):
 
     local_tz = tz.gettz("America/Los_Angeles")
     filenames = glob.glob(f"{path}/*.gpx")
+    log.info(f"loading {len(filenames)} gpx files from {path}")
     for idx, filename in enumerate(filenames):
         log.info(f"{idx+1}/{len(filenames)}\t{filename}")
         route_id = re.match(rf"{path}/(.+)?.gpx", filename).group(1)
