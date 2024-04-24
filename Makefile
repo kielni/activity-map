@@ -3,8 +3,8 @@ lint:
 	flake8 *.py
 
 download-strava:
-	unzip -u strava.zip 'activities/*' -d strava
-	gunzip strava/activities/*.gz
+	unzip -o -u strava.zip 'activities/*' -d strava
+	gunzip -f strava/activities/*.gz
 
 prep-strava:
 	python -u prep_strava.py strava/activities --bbox " $(BOUNDING_BOX)" --output output/routes.geojson 2>&1 | tee prep-strava.log
@@ -46,3 +46,4 @@ sync:
 	aws s3 cp output/ridge_trail_gz.geojson s3://$(S3_BUCKET)/ridge_trail.geojson --content-encoding gzip --content-type application/json
 	aws s3 cp output/bay_trail_gz.geojson s3://$(S3_BUCKET)/bay_trail.geojson --content-encoding gzip --content-type application/json
 	aws s3 cp output/trail_routes_gz.geojson s3://$(S3_BUCKET)/trail_routes.geojson --content-encoding gzip --content-type application/json
+	echo "http://$(S3_BUCKET).s3-website-us-east-1.amazonaws.com/index.html"
