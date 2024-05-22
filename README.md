@@ -15,7 +15,7 @@ the activities that overlap the Bay and Ridge trails. Use these maps to discover
 Install requirements: `pip install -r requirements.txt`
 
 Use [bboxfinder.com](http://bboxfinder.com/#0.000000,0.000000,0.000000,0.000000) to find coordinates for
-a local bounding box. Set the bounding box coordinates in the environment: 
+a local bounding box. Set the bounding box coordinates in the environment:
 `BOUNDING_BOX=-122.732314,36.916954,-120.977248,37.699028`
 
 Download activity data from Strava: [Download or Delete Your Account](https://www.strava.com/athlete/delete_your_account) then Download Request / Request Your Archive. Wait for an email, then download the archive
@@ -83,12 +83,11 @@ View activity heatmap: http://localhost:8000/index.html
 
 View activity heatmap with Bay trails: http://localhost:8000/bay.html
 
-
 # resources
 
-  - [bboxfinder](http://bboxfinder.com/#51.830755,4.742883,52.256198,5.552837) draw and get coordinates for a bounding box
-  - [geopandas](https://geopandas.org/en/stable/getting_started/introduction.html) load GPX and GeoJSON files, apply geometric algorithms, and write GeoJSON
-  - [gpxpy](https://github.com/tkrajina/gpxpy) read activity metadata from GPX files
-  - [MapTiler](https://docs.maptiler.com/sdk-js/examples/) JavaScript SDK with excellent documentation and examples
-  - [MapTiler Polyline helper](https://docs.maptiler.com/sdk-js/api/helpers/#polyline) example usage for drawing GeoJSON on a map
-  - [about vector tiles](https://www.maptiler.com/news/2019/02/what-are-vector-tiles-and-why-you-should-care/)
+- [bboxfinder](http://bboxfinder.com/#51.830755,4.742883,52.256198,5.552837) draw and get coordinates for a bounding box
+- [geopandas](https://geopandas.org/en/stable/getting_started/introduction.html) load GPX and GeoJSON files, apply geometric algorithms, and write GeoJSON
+- [gpxpy](https://github.com/tkrajina/gpxpy) read activity metadata from GPX files
+- [MapTiler](https://docs.maptiler.com/sdk-js/examples/) JavaScript SDK with excellent documentation and examples
+- [MapTiler Polyline helper](https://docs.maptiler.com/sdk-js/api/helpers/#polyline) example usage for drawing GeoJSON on a map
+- [about vector tiles](https://www.maptiler.com/news/2019/02/what-are-vector-tiles-and-why-you-should-care/)

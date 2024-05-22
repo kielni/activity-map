@@ -42,7 +42,7 @@ def main(path: str, output_fn: str, bbox_str: Optional[str] = None):
         log.info(f"{idx+1}/{len(filenames)}\t{filename}")
         route_id = re.match(rf"{path}/(.+)?.gpx", filename).group(1)
         if route_id in seen:
-            log.info("\tskipping: already in geojson")
+            # log.info("\tskipping: already in geojson")
             continue
 
         # read gpx to get start time
