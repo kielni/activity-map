@@ -1,26 +1,32 @@
+// picnic table GeoJSON data
 const PICNIC = {
   type: "FeatureCollection",
   features: [],
 };
+// show picnic tables at zoom 12 and above
 const minZoom = 12;
 const initialZoom = 12;
 let prevZoom = initialZoom;
+// bounding boxes that have been queried
 const boxes = new Set();
-
 const urlParams = new URLSearchParams(window.location.search);
-const lat = parseFloat(urlParams.get("lat")) || 37.35;
-const lng = parseFloat(urlParams.get("lng")) || -121.9;
+
+/*
+  map events
+*/
 
 maptilersdk.config.apiKey = MAP_TILER_API_KEY;
 const map = new maptilersdk.Map({
   container: "map",
   style: maptilersdk.MapStyle.OUTDOOR,
-  center: [lng, lat],
+  center: [
+    parseFloat(urlParams.get("lng")) || -121.9,
+    parseFloat(urlParams.get("lat")) || 37.35,
+  ],
   zoom: initialZoom,
 });
 
 map.on("load", async function () {
-  console.log("loaded map");
   prevZoom = initialZoom;
   // add layer for picnic tables (initially empty)
   map.addSource("picnicSource", { type: "geojson", data: PICNIC });
@@ -59,95 +65,12 @@ map.on("dragend", function () {
   loadPicnicTables(map.getBounds().toArray());
 });
 
-function setLatLngParams() {
-  // set lat and lng url params to center
-  const center = map.getCenter();
-  const lat = center.lat.toFixed(3);
-  const lng = center.lng.toFixed(3);
-  const url = `${window.location.origin}${window.location.pathname}?lat=${lat}&lng=${lng}`;
-  console.log(`center: ${lat}, ${lng}`);
-  history.pushState({}, null, url);
-}
-
-function toFeature(lng, lat, id) {
-  return {
-    type: "Feature",
-    geometry: {
-      type: "Point",
-      coordinates: [lng, lat],
-    },
-    properties: {
-      id: id,
-    },
-  };
-}
-
-function addFeatures(new_features) {
-  const ids = new Set(
-    PICNIC.features.map((feature) => {
-      return feature.properties.id;
-    }),
-  );
-  console.log(
-    `${ids.size} current features; ${new_features.length} new features`,
-  );
-  new_features.forEach((feature) => {
-    if (!ids.has(feature.properties.id)) {
-      PICNIC.features.push(feature);
-    } else {
-      console.log(`skipping feature ${feature.geometry.coordinates}`);
-    }
-  });
-  if (PICNIC.features.length > ids.size) {
-    console.log(`${PICNIC.features.length - ids.size} new features`);
-    map.getSource("picnicSource").setData(PICNIC);
-  }
-}
-
-async function loadPicnicTables(bbox) {
-  // map tiler returns LngLatBounds southwest and northeast coordinates
-  // as an array: [[(-121.94,37.37,-121.70,37.48)]]
-  // overpass wants (south, west, north, east) = southwest lat, lng, northeast lat, lng
-  // as a string like (37.37,-121.94,37.48,-121.70)
-  if (map.getZoom() < minZoom) {
-    console.log("zoomed out too far: ", map.getZoom());
-    return;
-  }
-  // round to 3 decimal places (~110m)
-  const bboxStr = `${bbox[0][1].toFixed(3)},${bbox[0][0].toFixed(3)},${bbox[1][1].toFixed(3)},${bbox[1][0].toFixed(3)}`;
-  if (boxes.has(bboxStr)) {
-    console.log("already queried bbox ", bboxStr);
-    return;
-  }
-  boxes.add(bboxStr);
-  const query = `[out:json];
-    node
-      [leisure=picnic_table]
-      (${bboxStr});
-    out skel;
-  `;
-  const body = { data: query };
-  const formData = new URLSearchParams(body).toString();
-  const response = await fetch("https://overpass-api.de/api/interpreter", {
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
-    },
-    body: formData,
-    method: "POST",
-  });
-  const data = await response.json();
-  if (!data.elements) {
-    console.log("loaded 0 picnic table features");
-    return;
-  }
-  console.log(`loaded ${data.elements.length} picnic table features`);
-  const features = data.elements.map((el) => {
-    return toFeature(el.lon, el.lat, el.id);
-  });
-  addFeatures(features);
-}
+/* 
+  map controls
+*/
 
 function setPicnicControlVisibility() {
+  // show message on picnic table display, depending on zoom level
   const control = document.getElementById("picnic-control");
   if (map.getZoom() < minZoom) {
     control.innerHTML =
@@ -158,6 +81,7 @@ function setPicnicControlVisibility() {
   }
 }
 
+// message about picnic table display
 class picnicControl {
   onAdd(map) {
     this._container = document.getElementById("picnic-control");
@@ -175,12 +99,7 @@ class layerSwitcherControl {
   }
 
   _copyPicnicData(previousStyle, nextStyle) {
-    console.log(
-      "copying picnic data: previousStyle=",
-      previousStyle,
-      "nextStyle=",
-      nextStyle,
-    );
+    // copy picnic table data when switching map styles
     const picnicLayer = previousStyle.layers.find(
       (layer) => layer.id === "picnic",
     );
@@ -195,6 +114,7 @@ class layerSwitcherControl {
   }
 
   onAdd(map) {
+    // show outdoor and satellite basemaps
     ["OUTDOOR", "SATELLITE"].forEach((layerId) => {
       const basemapContainer = document.getElementById(layerId);
       basemapContainer.addEventListener("click", () => {
@@ -214,3 +134,99 @@ class layerSwitcherControl {
 
 map.addControl(new layerSwitcherControl(), "bottom-left");
 map.addControl(new picnicControl(), "bottom-right");
+
+/*
+  load picnic table data from Overpass API
+*/
+
+function setLatLngParams() {
+  // set lat and lng url params to map center
+  const center = map.getCenter();
+  const lat = center.lat.toFixed(3);
+  const lng = center.lng.toFixed(3);
+  const url = `${window.location.origin}${window.location.pathname}?lat=${lat}&lng=${lng}`;
+  console.log(`center: ${lat}, ${lng}`);
+  history.pushState({}, null, url);
+}
+
+function toFeature(lng, lat, id) {
+  // return a GeoJSON feature from coordinates and an id
+  return {
+    type: "Feature",
+    geometry: {
+      type: "Point",
+      coordinates: [lng, lat],
+    },
+    properties: {
+      id: id,
+    },
+  };
+}
+
+function addFeatures(newFeatures) {
+  // add new features to picic GeoJSON if not already present
+  const ids = new Set(
+    PICNIC.features.map((feature) => {
+      return feature.properties.id;
+    }),
+  );
+  console.log(
+    `${ids.size} current features; ${newFeatures.length} new features`,
+  );
+  newFeatures.forEach((feature) => {
+    if (!ids.has(feature.properties.id)) {
+      PICNIC.features.push(feature);
+    }
+  });
+  if (PICNIC.features.length > ids.size) {
+    console.log(`${PICNIC.features.length - ids.size} new features`);
+    map.getSource("picnicSource").setData(PICNIC);
+  }
+}
+
+async function loadPicnicTables(bbox) {
+  // load picnic tables from overpass API for a bounding box
+  // Map Tiler returns LngLatBounds southwest and northeast coordinates
+  // as an array: [[(-121.94,37.37,-121.70,37.48)]]
+  // Overpass wants (south, west, north, east) = sw lat, sw lng, ne lat, ne lng
+  // as a string like (37.37,-121.94,37.48,-121.70)
+  if (map.getZoom() < minZoom) {
+    console.log("zoomed out too far: ", map.getZoom());
+    return;
+  }
+  // round to 3 decimal places (~110m)
+  const sw = bbox[0];
+  const ne = bbox[1];
+  const bboxStr = `${sw[1].toFixed(3)},${sw[0].toFixed(3)},${ne[1].toFixed(3)},${ne[0].toFixed(3)}`;
+  if (boxes.has(bboxStr)) {
+    console.log("already queried bbox ", bboxStr);
+    return;
+  }
+  boxes.add(bboxStr);
+  // see https://dev.overpass-api.de/overpass-doc/en/criteria/index.html
+  const query = `[out:json];
+    node
+      [leisure=picnic_table]
+      (${bboxStr});
+    out skel;
+  `;
+  const body = { data: query };
+  const formData = new URLSearchParams(body).toString();
+  const response = await fetch("https://overpass-api.de/api/interpreter", {
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+    },
+    body: formData,
+    method: "POST",
+  });
+  const data = await response.json();
+  if (!data.elements) {
+    console.log("no table features");
+    return;
+  }
+  console.log(`loaded ${data.elements.length} picnic table features`);
+  const features = data.elements.map((el) => {
+    return toFeature(el.lon, el.lat, el.id);
+  });
+  addFeatures(features);
+}
