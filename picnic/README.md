@@ -4,12 +4,23 @@ Query [Open Street Map for picnic tables](https://taginfo.openstreetmap.org/tags
 with the [Overpass API](https://dev.overpass-api.de/overpass-doc/en/index.html), and
 display on a [Map Tiler map](https://docs.maptiler.com/sdk-js/).
 
-Open Street Map has more than 325,000 picnic tables tagged in their database. These are often
+<img src="picnic_screenshot.png" width=500 height=500>
+
+## How it works
+
+At zoom level 12 (city) or higher, query the Overpass API for picnic tables using the map's bounding box.
+
+Convert the data from the Overpass API to GeoJSON, then update map's data source to display picnic table markers
+on a symbol layer.
+
+## Tools
+
+There are more than 325,000 picnic tables tagged in the Open Street Map geographic database. These are often
 displayed only at very high zoom levels (as in Map Tiler's `MapStyle.OPENSTREETMAP`) or not at all
 (Google Maps).
 
 The Overpass API is a search interface to the Open Street Map geographic database. The API
-is exotic and likely inaccessible for non-engineers. Sending a POST request to the Overpass API:
+is exotic and likely inaccessible for non-engineers. Send this query as a POST request to get picnic tables:
 
 ```
 [out:json];
@@ -19,7 +30,7 @@ node
 out skel;
 ```
 
-returns picnic table locations in JSON format:
+This returns picnic table locations in JSON format:
 
 ```
 {
@@ -42,10 +53,6 @@ returns picnic table locations in JSON format:
 ```
 
 Map Tiler provides a well-documented JavaScript SDK that makes it simple to build an interactive map
-to display GeoJSON data.
+with GeoJSON data.
 
-These files use these to display picnic tables on an interactive map.
-
-At zoom level 12 (city) or higher, query the Overpass API for picnic tables using the map's bounding box.
-Convert the data from the Overpass API to GeoJSON, then set the map's data source to display picnic table markers.
 

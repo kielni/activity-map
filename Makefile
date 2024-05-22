@@ -42,6 +42,7 @@ sync-picnic:
 	aws s3 cp picnic/style.css s3://$(S3_BUCKET)/picnic/style.css
 	aws s3 cp picnic/map.js s3://$(S3_BUCKET)/picnic/map.js
 	aws s3 cp config_aws.js s3://$(S3_BUCKET)/config.js
+	aws s3 cp picnic/favicon-32x32.png s3://$(S3_BUCKET)/picnic/favicon-32x32.png
 	echo "http://$(S3_BUCKET).s3-website-us-east-1.amazonaws.com/picnic.html"
 
 sync:
