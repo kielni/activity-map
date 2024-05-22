@@ -1,6 +1,8 @@
 lint:
 	black *.py
 	flake8 *.py
+	npx prettier *.html --write
+	npx prettier picnic --write
 
 download-strava:
 	unzip -o -u strava.zip 'activities/*' -d strava
@@ -33,6 +35,14 @@ overlap:
 	gzip output/trail_routes_gz.geojson
 	mv output/trail_routes_gz.geojson.gz output/trail_routes_gz.geojson
 	ls -lh output/trail_routes*
+
+sync-picnic:
+	aws s3 cp picnic.html s3://$(S3_BUCKET)/picnic.html
+	aws s3 cp picnic/picnic-120.png s3://$(S3_BUCKET)/picnic/picnic-120.png
+	aws s3 cp picnic/style.css s3://$(S3_BUCKET)/picnic/style.css
+	aws s3 cp picnic/map.js s3://$(S3_BUCKET)/picnic/map.js
+	aws s3 cp config_aws.js s3://$(S3_BUCKET)/config.js
+	echo "http://$(S3_BUCKET).s3-website-us-east-1.amazonaws.com/picnic.html"
 
 sync:
 	# prereqs
