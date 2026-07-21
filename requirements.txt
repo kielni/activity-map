@@ -1,3 +1,8 @@
-pyogrio==0.7.2
-geopandas==0.14.3
+pyogrio==0.11.0
+geopandas==1.1.1
 gpxpy==1.6.2
+osmnx==2.0.7
+folium==0.20.0
+requests
+tqdm
+fiona
