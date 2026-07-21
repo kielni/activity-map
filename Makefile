@@ -1,3 +1,5 @@
+-include local.env
+
 lint:
 	black *.py
 	flake8 *.py
@@ -10,13 +12,13 @@ download-strava:
 
 prep-strava:
 	python -u prep_strava.py strava/activities --bbox " $(BOUNDING_BOX)" --output output/routes.geojson 2>&1 | tee prep-strava.log
-	cp output/routes.geojson output/routes_gz.geojson
+	cp output/routes_compressed.geojson output/routes_gz.geojson
 	gzip output/routes_gz.geojson
 	mv output/routes_gz.geojson.gz output/routes_gz.geojson
 	ls -lh output/routes*
 
 prep-ridge:
-	python -u prep_ridge.py 2>&1 | tee prep-rdige.log
+	python -u prep_ridge.py 2>&1 | tee prep-ridge.log
 	cp output/ridge_trail.geojson output/ridge_trail_gz.geojson
 	gzip output/ridge_trail_gz.geojson
 	mv output/ridge_trail_gz.geojson.gz output/ridge_trail_gz.geojson
@@ -36,6 +38,17 @@ overlap:
 	mv output/trail_routes_gz.geojson.gz output/trail_routes_gz.geojson
 	ls -lh output/trail_routes*
 
+refresh-picnic:
+	# download and parse data for US and Canada (~30 minutes)
+	python -u prep_picnic.py download
+	python -u prep_picnic.py parse 2>&1 | tee prep-picnic.log
+	ls -lh output/picnic*
+
+parse-picnic:
+	# parse data files in OSM_DATA_DIR (US & Canada: ~10 minutes)
+	python -u prep_picnic.py parse 2>&1 | tee prep-picnic.log
+	ls -lh output/picnic*
+
 sync-picnic:
 	aws s3 cp picnic.html s3://$(S3_BUCKET)/picnic.html
 	aws s3 cp picnic/picnic-120.png s3://$(S3_BUCKET)/picnic/picnic-120.png
@@ -43,6 +56,7 @@ sync-picnic:
 	aws s3 cp picnic/map.js s3://$(S3_BUCKET)/picnic/map.js
 	aws s3 cp config_aws.js s3://$(S3_BUCKET)/config.js
 	aws s3 cp picnic/favicon-32x32.png s3://$(S3_BUCKET)/picnic/favicon-32x32.png
+	aws s3 cp output/picnic.fgb s3://$(S3_BUCKET)/picnic.fgb
 	echo "http://$(S3_BUCKET).s3-website-us-east-1.amazonaws.com/picnic.html"
 
 sync:
