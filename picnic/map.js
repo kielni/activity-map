@@ -3,6 +3,9 @@ const PICNIC = {
   type: "FeatureCollection",
   features: [],
 };
+// static FlatGeobuf file, queried directly via HTTP range requests using
+// its built-in packed Hilbert R-tree index (see picnic.fgb)
+const PICNIC_DATA_URL = "picnic.fgb";
 // show picnic tables at zoom 12 and above
 const minZoom = 12;
 const initialZoom = 12;
@@ -136,7 +139,7 @@ map.addControl(new layerSwitcherControl(), "bottom-left");
 map.addControl(new picnicControl(), "bottom-right");
 
 /*
-  load picnic table data from Overpass API
+  load picnic table data from FlatGeobuf
 */
 
 function setLatLngParams() {
@@ -149,20 +152,6 @@ function setLatLngParams() {
   history.pushState({}, null, url);
 }
 
-function toFeature(lng, lat, id) {
-  // return a GeoJSON feature from coordinates and an id
-  return {
-    type: "Feature",
-    geometry: {
-      type: "Point",
-      coordinates: [lng, lat],
-    },
-    properties: {
-      id: id,
-    },
-  };
-}
-
 function addFeatures(newFeatures) {
   // add new features to picic GeoJSON if not already present
   const ids = new Set(
@@ -173,8 +162,10 @@ function addFeatures(newFeatures) {
   console.log(
     `${ids.size} current features; ${newFeatures.length} new features`,
   );
+  const seenIds = new Set(ids);
   newFeatures.forEach((feature) => {
-    if (!ids.has(feature.properties.id)) {
+    if (!seenIds.has(feature.properties.id)) {
+      seenIds.add(feature.properties.id);
       PICNIC.features.push(feature);
     }
   });
@@ -185,48 +176,29 @@ function addFeatures(newFeatures) {
 }
 
 async function loadPicnicTables(bbox) {
-  // load picnic tables from overpass API for a bounding box
+  // load picnic tables within a bounding box from PICNIC_DATA_URL, using
+  // FlatGeobuf's packed Hilbert R-tree index + HTTP range requests to
+  // fetch only the bytes covering the requested area
   // Map Tiler returns LngLatBounds southwest and northeast coordinates
   // as an array: [[(-121.94,37.37,-121.70,37.48)]]
-  // Overpass wants (south, west, north, east) = sw lat, sw lng, ne lat, ne lng
-  // as a string like (37.37,-121.94,37.48,-121.70)
   if (map.getZoom() < minZoom) {
     console.log("zoomed out too far: ", map.getZoom());
     return;
   }
-  // round to 3 decimal places (~110m)
   const sw = bbox[0];
   const ne = bbox[1];
+  // round to 3 decimal places (~110m) to dedupe near-identical queries
   const bboxStr = `${sw[1].toFixed(3)},${sw[0].toFixed(3)},${ne[1].toFixed(3)},${ne[0].toFixed(3)}`;
   if (boxes.has(bboxStr)) {
     console.log("already queried bbox ", bboxStr);
     return;
   }
   boxes.add(bboxStr);
-  // see https://dev.overpass-api.de/overpass-doc/en/criteria/index.html
-  const query = `[out:json];
-    node
-      [leisure=picnic_table]
-      (${bboxStr});
-    out skel;
-  `;
-  const body = { data: query };
-  const formData = new URLSearchParams(body).toString();
-  const response = await fetch("https://overpass-api.de/api/interpreter", {
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
-    },
-    body: formData,
-    method: "POST",
-  });
-  const data = await response.json();
-  if (!data.elements) {
-    console.log("no table features");
-    return;
+  const rect = { minX: sw[0], minY: sw[1], maxX: ne[0], maxY: ne[1] };
+  const features = [];
+  for await (const feature of flatgeobuf.deserialize(PICNIC_DATA_URL, rect)) {
+    features.push(feature);
   }
-  console.log(`loaded ${data.elements.length} picnic table features`);
-  const features = data.elements.map((el) => {
-    return toFeature(el.lon, el.lat, el.id);
-  });
+  console.log(`loaded ${features.length} picnic table features`);
   addFeatures(features);
 }
