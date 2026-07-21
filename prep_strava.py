@@ -3,6 +3,7 @@ import glob
 import logging
 import re
 from typing import Optional, Set, List
+import math
 
 from dateutil import tz
 import geopandas as gpd
@@ -11,6 +12,9 @@ import pandas as pd
 from shapely import Polygon
 
 log = logging.getLogger("main")
+
+# at 37.2 degrees latitude for zoom level 13
+METERS_PER_PX = 156543.03392 * math.cos(math.radians(37.2)) / (2**13.5)
 
 
 def main(path: str, output_fn: str, bbox_str: Optional[str] = None):
@@ -80,6 +84,19 @@ def main(path: str, output_fn: str, bbox_str: Optional[str] = None):
     )
     gdf.to_file(output_fn, driver="GeoJSON")
     log.info(f"wrote {len(gdf)} routes to {output_fn}")
+
+    # simplify for visible pixels
+    gdf_m = gdf.to_crs(3857)
+    gdf_m["geometry"] = gdf_m.geometry.simplify(METERS_PER_PX, preserve_topology=False)
+    gdf_compressed = gdf_m.to_crs(4326)
+    compressed_fn = output_fn.replace(".geojson", "_compressed.geojson")
+    gdf_compressed.to_file(
+        compressed_fn,
+        driver="GeoJSON",
+        COORDINATE_PRECISION=5,  # quantize coords (~1.1 m at equator)
+        RFC7946="YES",
+    )
+    log.info(f"wrote {len(gdf)} routes to {compressed_fn}")
 
 
 if __name__ == "__main__":

@@ -39,6 +39,11 @@
       zoom: 10,
     });
     map.on("load", async function () {
+      // make trails easier to see
+      map.setPaintProperty("Other trails", "line-color", "rgba(5, 69, 11, 1)");
+      map.setPaintProperty("Track", "line-color", "rgba(5, 69, 11, 1)");
+      map.setPaintProperty("Path", "line-color", "rgba(5, 69, 11, 1)");
+
       await maptilersdk.helpers.addPolyline(map, {
         data: RIDGE_TRAIL_URL,
         lineColor: "#FFFF00",
