@@ -4,10 +4,10 @@ const PICNIC = {
   features: [],
 };
 // static FlatGeobuf file, queried directly via HTTP range requests using
-// its built-in packed Hilbert R-tree index (see picnic.fgb)
+// its built-in packed Hilbert R-tree index
 const PICNIC_DATA_URL = "picnic.fgb";
-// show picnic tables at zoom 12 and above
-const minZoom = 12;
+// show picnic tables at zoom 11 and above
+const minZoom = 11;
 const initialZoom = 12;
 let prevZoom = initialZoom;
 // bounding boxes that have been queried

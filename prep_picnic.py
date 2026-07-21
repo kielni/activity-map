@@ -1,7 +1,7 @@
 """Extract picnic table features from Open Street Map to a static file.
 
 [North America (US) taginfo](https://taginfo.geofabrik.de/north-america:us/) instance
-shows a US extract has about 102k `leisure=picnic_table` nodes.
+shows a US & Canada extract has about 126k `leisure=picnic_table` nodes.
 """
 
 import argparse
@@ -51,36 +51,29 @@ def download_osm(region: str = "north-america/us") -> Path:
     return dest
 
 
-def _feature_count(geojson_path: Path) -> int:
-    with fiona.open(str(geojson_path)) as source:
-        return len(source)
-
-
-def parse_pbf(pbf_path: Path) -> str:
+def parse_pbf(pbf: Path) -> str:
     """Filter one OSM extract to picnic table nodes.
 
-    Writes a tag-filtered intermediate named by area (e.g. `us-latest`
+    Writes a tag-filtered intermediate named by region (e.g. `us-latest`
     from `us-latest.osm.pbf`) so multiple regions can be processed
     without overwriting each other's output. Queries with
-    `-sql "SELECT * FROM points WHERE ..."` rather than naming `points`
-    as the target layer plus `-where`: GDAL's OSM driver only skips
-    indexing node locations for way/relation geometry resolution when it
-    can tell, via that SQL, that no other layer is of interest.
+    `-sql "SELECT * FROM points WHERE ..."` so that GDAL's OSM driver will skip
+    indexing node locations for way/relation geometry resolution.
     """
-    area: str = pbf_path.name.split(".")[0]
-    log.info(f"parsing {pbf_path}")
+    region: str = pbf.name.split(".")[0]
+    log.info(f"parsing {pbf}")
     output_dir: Path = Path("output")
-    tags_geojson: Path = output_dir / f"picnic_tags_{area}.geojson"
-    log.info(f"filtering {pbf_path} to picnic table nodes as GeoJSON")
+    fgb: Path = output_dir / f"picnic_tags_{region}.fgb"
+    log.info(f"filtering {pbf} to picnic table nodes as FlatGeobuf")
     # GDAL's default OSM driver config doesn't promote "leisure" to its own
     # column; it lives in the catch-all other_tags hstore string instead.
     subprocess.run(
         [
             "ogr2ogr",
             "-f",
-            "GeoJSON",
-            str(tags_geojson),
-            str(pbf_path),
+            "FlatGeobuf",
+            str(fgb),
+            str(pbf),
             "-sql",
             (
                 "SELECT * FROM points "
@@ -89,8 +82,10 @@ def parse_pbf(pbf_path: Path) -> str:
         ],
         check=True,
     )
-    log.info(f"{_feature_count(tags_geojson)} picnic table nodes")
-    return area
+    with fiona.open(str(fgb)) as source:
+        count = len(source)
+    log.info(f"{count} picnic table nodes")
+    return region
 
 
 def parse_osm() -> Path:
@@ -101,11 +96,11 @@ def parse_osm() -> Path:
     """
     output_dir: Path = Path("output")
     pbf_paths: list[Path] = sorted(Path(os.environ["OSM_DATA_DIR"]).glob("*.osm.pbf"))
-    areas: list[str] = [parse_pbf(p) for p in pbf_paths]
+    regions: list[str] = [parse_pbf(p) for p in pbf_paths]
 
-    log.info(f"loading {len(areas)} filtered extracts")
+    log.info(f"loading {len(regions)} filtered extracts")
     tags: list[gpd.GeoDataFrame] = [
-        gpd.read_file(output_dir / f"picnic_tags_{area}.geojson") for area in areas
+        gpd.read_file(output_dir / f"picnic_tags_{area}.fgb") for area in regions
     ]
     total = sum([len(gdf) for gdf in tags])
     log.info(f"loaded {total} features")
@@ -113,8 +108,12 @@ def parse_osm() -> Path:
         pd.concat(tags, ignore_index=True), crs="EPSG:4326"
     )
 
-    log.info(f"stripping {len(gdf)} picnic tables to minimal properties")
+    log.info(f"stripping {len(gdf)} picnic tables to id and geometry")
     gdf = gdf[["osm_id", "geometry"]].rename(columns={"osm_id": "id"})
+    # keep only unique rows by id
+    # so that downloading overlapping areas will not create duplicates
+    gdf = gdf.drop_duplicates(subset="id", ignore_index=True)
+    log.info(f"{len(gdf)} after dropping duplicates")
 
     output_path = output_dir / "picnic.fgb"
     gdf.to_file(output_path, driver="FlatGeobuf")
@@ -124,7 +123,7 @@ def parse_osm() -> Path:
 
 def main(ops: list[str], region: str = "north-america/us"):
     if "download" in ops:
-        download_osm(region)
+        download_osm(region.split(","))
     if "parse" in ops:
         parse_osm()
 
@@ -143,8 +142,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--region",
         type=str,
-        default="north-america/us",
-        help="Geofabrik region path to download, e.g. north-america/us",
+        default="north-america/us,north-america/canada",
+        help="comma-delimited list of regions to download",
     )
     args = parser.parse_args()
     main(args.op, args.region)
