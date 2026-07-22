@@ -56,7 +56,7 @@ map.on("zoomend", function () {
   const was = prevZoom;
   prevZoom = map.getZoom();
   setPicnicControlVisibility();
-  if (map.getZoom() > was) {
+  if (map.getZoom() > was && map.getZoom() != minZoom) {
     console.log("zoom in, skipping query");
     return;
   }
@@ -82,6 +82,13 @@ function setPicnicControlVisibility() {
     control.innerHTML =
       '<i class="bi bi-check-circle-fill  text-success"></i> Showing picnic tables';
   }
+}
+
+function setPicnicLoading() {
+  // show a loading message while a picnic table query is in flight
+  const control = document.getElementById("picnic-control");
+  control.innerHTML =
+    '<i class="bi bi-hourglass-split text-muted"></i> Loading picnic tables...';
 }
 
 // message about picnic table display
@@ -196,9 +203,14 @@ async function loadPicnicTables(bbox) {
   boxes.add(bboxStr);
   const rect = { minX: sw[0], minY: sw[1], maxX: ne[0], maxY: ne[1] };
   const features = [];
-  for await (const feature of flatgeobuf.deserialize(PICNIC_DATA_URL, rect)) {
-    features.push(feature);
+  setPicnicLoading();
+  try {
+    for await (const feature of flatgeobuf.deserialize(PICNIC_DATA_URL, rect)) {
+      features.push(feature);
+    }
+    console.log(`loaded ${features.length} picnic table features`);
+    addFeatures(features);
+  } finally {
+    setPicnicControlVisibility();
   }
-  console.log(`loaded ${features.length} picnic table features`);
-  addFeatures(features);
 }
